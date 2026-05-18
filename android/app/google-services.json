@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "615593709997",
+    "project_id": "aira-exam-system",
+    "storage_bucket": "aira-exam-system.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:615593709997:android:a41412e791d8b3e1709124",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhT-OYgTTsLLJDQziRCd_LlQ5z4cQlvqs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

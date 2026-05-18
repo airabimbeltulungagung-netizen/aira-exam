@@ -11,47 +11,28 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # 1. Jantung utama pembungkus Website cPanel AIRA HUB
   webview_flutter: ^4.10.0
-
-  # 2. Untuk membaca status persentase baterai HP siswa secara live
   battery_plus: ^6.2.0
-
-  # 3. Untuk mendeteksi sinyal internet (WiFi/Seluler) siswa secara real-time
   connectivity_plus: ^6.1.0
-
-  # 4. Library format jam digital (HH:mm) agar presisi sesuai waktu HP
   intl: ^0.19.0
-
-  # 5. Untuk meluncurkan link WhatsApp otomatis ke nomor Admin saat minta kartu
   url_launcher: ^6.3.0
-
-  # =========================================================================
-  # AUTO DOWNLOAD APK SYSTEM
-  # =========================================================================
   flutter_downloader: ^1.11.7
   path_provider: ^2.1.2
   permission_handler: ^11.3.1
+  device_info_plus: ^10.1.0   
+  onesignal_flutter: ^5.2.4   # Tetap aman untuk notifikasi massal OneSignal
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  # Library pembantu pembuat ikon otomatis agar normal tanpa error
   flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
-
-  # =========================================================================
-  # SUNTIKAN REGISTER ASET: MENDAFTARKAN LOGO PREMIUM AIRA HUB
-  # =========================================================================
   assets:
     - assets/ic_launcher.png
 
-# =========================================================================
-# KONFIGURASI OTOMATIS GENERATOR IKON APLIKASI AIRA EXAM
-# =========================================================================
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true

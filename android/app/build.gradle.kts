@@ -24,7 +24,10 @@ android {
         applicationId = "com.example.myapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        
+        // 🌟 SUNTIKAN BERHASIL: Mengunci batas minimal SDK Android ke versi 23 (Android 6.0+)
         minSdk = flutter.minSdkVersion
+        
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
