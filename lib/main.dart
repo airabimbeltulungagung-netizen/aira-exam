@@ -15,6 +15,9 @@ import 'package:permission_handler/permission_handler.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // SUNTIKAN SAKTI: Paksa Android sembunyikan bar atas & bawah sejak aplikasi dibuka
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
   // ================= INIT DOWNLOADER =================
   await FlutterDownloader.initialize(
     debug: true,
@@ -43,11 +46,55 @@ class MyApp extends StatelessWidget {
 }
 
 // =========================================================================
-// 1. HALAMAN UTAMA (WELCOME PAGE DUA TOMBOL + INTEGRASI LOGO AIRA HUB)
+// 1. HALAMAN UTAMA (WELCOME PAGE - SEKARANG STATEFUL BIAR SAKTI DETEKSI LAYAR)
 // =========================================================================
-class WelcomePage extends StatelessWidget {
+class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
 
+  @override
+  State<WelcomePage> createState() => _WelcomePageState();
+}
+
+class _WelcomePageState extends State<WelcomePage> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // Daftarkan satpam pengintai aktivitas fokus layar
+    WidgetsBinding.instance.addObserver(this);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Trik taktis: Jika siswa nakal mencoba menarik status bar atas/bawah saat di halaman depan,
+    // kembalikan paksa ke full screen dan munculkan notifikasi peringatan merah.
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+            content: Text(
+              'PERINGATAN: Dilarang mengusap layar atau membuka menu lain selama aplikasi aktif!',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  // Tombol WA ke nomor 6285704351856 - Diperbaiki mekanismenya agar lolos blokir OS Android baru
   void _bukaWhatsAppAdmin() async {
     const String nomorWA = "6285704351856";
     const String pesanOtomatis =
@@ -55,12 +102,22 @@ class WelcomePage extends StatelessWidget {
     final Uri url = Uri.parse(
         "https://wa.me/$nomorWA?text=${Uri.encodeComponent(pesanOtomatis)}");
 
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    try {
+      await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.orange,
+            content: Text(
+                'Gagal membuka WhatsApp. Pastikan aplikasi WA terinstal di HP Anda.'),
+          ),
+        );
+      }
     }
   }
 
-  // ================= SUNTIKAN BARU: CEK IZIN OVERLAY WINDOW =================
+  // ================= SUNTIKAN: CEK IZIN OVERLAY WINDOW =================
   Future<void> _periksaDanMintaIzinOverlay(BuildContext context) async {
     var status = await Permission.systemAlertWindow.status;
 
@@ -98,9 +155,6 @@ class WelcomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
-        overlays: SystemUiOverlay.values);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
       body: SafeArea(
@@ -282,8 +336,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
     _timer =
         Timer.periodic(const Duration(seconds: 1), (Timer t) => _updateTime());
 
-    // ANTI-CACHE URL: Ditambah parameter waktu acak riil agar ketika admin klik
-    // tombol "Restart/Reset" di web cPanel, WebView langsung sinkron memuat halaman login baru tanpa tersangkut sisa error.
+    // INTEGRASI WEBSITE UTAMA AIRA BIMBEL (airabimbel.biz.id) ANTI-CACHE RIIL
     final String antiCacheUrl =
         'https://airabimbel.biz.id/ujian_sekolah/login.php?t=${DateTime.now().millisecondsSinceEpoch}';
 
