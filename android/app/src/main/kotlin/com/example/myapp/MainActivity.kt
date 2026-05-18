@@ -1,4 +1,4 @@
-package com.example.aira_exam // 🌟 WAJIB: Pastikan ini sama dengan Package ID asli proyekmu
+package com.example.myapp // 🌟 WAJIB: Pastikan ini sama dengan Package ID asli proyekmu
 
 import android.view.WindowManager
 import android.os.Bundle
@@ -8,7 +8,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "flutter/launch"
+    private val CHANNEL = "aira.exam/launch"
 
     override fun configureFlutterEngine(flutterEngine: io.flutter.embedding.engine.FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

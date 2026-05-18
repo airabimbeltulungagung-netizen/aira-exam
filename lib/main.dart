@@ -714,7 +714,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
 }
 
 class SystemLauncher {
-  static const MethodChannel _channel = MethodChannel('flutter/launch');
+  static const MethodChannel _channel = MethodChannel('aira.exam/launch');
   static Future<void> setWindowSecure(bool secure) async {
     try {
       await _channel.invokeMethod('setWindowSecure', {'secure': secure});
