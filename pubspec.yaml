@@ -21,6 +21,7 @@ dependencies:
   permission_handler: ^11.3.1
   device_info_plus: ^10.1.0   
   onesignal_flutter: ^5.2.4   # Tetap aman untuk notifikasi massal OneSignal
+  shared_preferences: ^2.5.5  # 🌟 UTUH AMAN! Sudah terpasang sempurna untuk inbox lokal
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert'; // 🌟 Untuk kebutuhan engine histori notifikasi JSON
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -11,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 🌟 Untuk engine penyimpanan inbox lokal
 // =============================================================================
 
 void main() async {
@@ -39,6 +41,13 @@ void main() async {
 
   OneSignal.Notifications.requestPermission(true);
 
+  // 🌟 JALUR FOREGROUND MONITOR: Ambil info siaran OneSignal saat apps terbuka, seret ke memori lokal HP
+  OneSignal.Notifications.addForegroundWillDisplayListener((event) async {
+    final title = event.notification.title ?? "Pengumuman AIRA";
+    final body = event.notification.body ?? "";
+    await ServiceNotifikasiLokal.simpanKeHistori(title, body);
+  });
+
   runApp(const MyApp());
 }
 
@@ -59,7 +68,100 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WelcomePage(),
+      // 🌟 PERUBAHAN GERBANG UTAMA: Langsung diarahkan ke Splash Screen Loading Estetik
+      home: const HalamanLoadingAwal(),
+    );
+  }
+}
+
+// =========================================================================
+// 🌟 TAMPILAN BARU: SPLASH SCREEN LOADING AWAL YANG ESTETIK & PREMIUM
+// =========================================================================
+class HalamanLoadingAwal extends StatefulWidget {
+  const HalamanLoadingAwal({super.key});
+
+  @override
+  State<HalamanLoadingAwal> createState() => _HalamanLoadingAwalState();
+}
+
+class _HalamanLoadingAwalState extends State<HalamanLoadingAwal> {
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    
+    // Timer 3 detik untuk loading awal, setelah selesai ganti ke WelcomePage secara mulus
+    Timer(const Duration(milliseconds: 3000), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const WelcomePage()),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E293B), // Background gelap mahal ala EdTech Enterprise
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Container lingkaran dengan aksen bayangan glow minimalis
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.03),
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/ic_launcher.png',
+                  width: 115,
+                  height: 115,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.shield_rounded,
+                    size: 80,
+                    color: Color(0xFF6C5CE7),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'AIRA EXAM SYSTEM',
+              style: TextStyle(
+                fontSize: 26, 
+                fontWeight: FontWeight.w900, // 🌟 FIX 1: Diubah dari FontWeight.black menjadi FontWeight.w900 agar valid constant
+                color: Colors.white, 
+                letterSpacing: 0.8
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Secure, Integrity, & Professional EdTech',
+              style: TextStyle(
+                fontSize: 12, 
+                color: Colors.white.withOpacity(0.4), 
+                letterSpacing: 0.5
+              ),
+            ),
+            const SizedBox(height: 60),
+            // Indikator Loading melingkar warna kuning emas sekunder bimbemu yang kontras dan smooth
+            const SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                color: Color(0xFFFFD200),
+                strokeWidth: 3,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -166,6 +268,24 @@ class _WelcomePageState extends State<WelcomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FC),
+      // 🌟 SUNTIKAN TOMBOL IKON KOTAK MASUK NOTIFIKASI DI BAR ATAS WELCOME PAGE
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active_rounded, color: Color(0xFF6C5CE7), size: 26),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const KotakNotifikasiPage()),
+              );
+            },
+          ),
+          const SizedBox(width: 16),
+        ],
+      ),
       body: Stack(
         children: [
           Positioned(
@@ -186,8 +306,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: 28.0, vertical: 24.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment
-                      .center, // 🌟 FIX 1: Sudah tidak typo 'main' lagi
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -266,7 +385,6 @@ class _WelcomePageState extends State<WelcomePage> {
                                   color: Colors.green, size: 20),
                               SizedBox(width: 12),
                               Expanded(
-                                // 🌟 FIX 2: Sudah tidak typo 'SExpanded' lagi
                                 child: Text(
                                     'Sistem Keamanan Fokus Jendela Native Aktif',
                                     style: TextStyle(
@@ -719,5 +837,142 @@ class SystemLauncher {
     try {
       await _channel.invokeMethod('setWindowSecure', {'secure': secure});
     } catch (_) {}
+  }
+}
+
+// =========================================================================
+// 🌟 TAMPILAN BARU: TAB HISTORI KOTAK MASUK NOTIFIKASI (INBOX) SISWA
+// =========================================================================
+class KotakNotifikasiPage extends StatefulWidget {
+  const KotakNotifikasiPage({super.key});
+
+  @override
+  State<KotakNotifikasiPage> createState() => _KotakNotifikasiPageState();
+}
+
+class _KotakNotifikasiPageState extends State<KotakNotifikasiPage> {
+  List<Map<String, String>> _listNotif = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _muatDaftarNotifikasi();
+  }
+
+  Future<void> _muatDaftarNotifikasi() async {
+    final data = await ServiceNotifikasiLokal.ambilHistori();
+    setState(() {
+      _listNotif = data;
+    });
+  }
+
+  Future<void> _bersihkanSemuaHistori() async {
+    await ServiceNotifikasiLokal.hapusSemua();
+    setState(() {
+      _listNotif.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6FC),
+      appBar: AppBar(
+        title: const Text('Kotak Masuk Pengumuman', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          if (_listNotif.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.redAccent, size: 26),
+              onPressed: _bersihkanSemuaHistori,
+            ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: _listNotif.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.mail_outline_rounded, size: 60, color: Colors.black26),
+                  SizedBox(height: 12),
+                  Text('Belum ada pengumuman masuk dari Admin.', style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _listNotif.length,
+              itemBuilder: (context, index) {
+                final item = _listNotif[index];
+                return Card(
+                  color: Colors.white,
+                  elevation: 0,
+                  margin: const EdgeInsets.only(bottom: 12), // 🌟 FIX 2: Diubah dari EdgeInsets.bottom(12) menjadi .only(bottom: 12) agar valid constructor
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14), 
+                    side: const BorderSide(color: Colors.black12, width: 0.5),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFF6C5CE7), 
+                      child: Icon(Icons.campaign_rounded, color: Colors.white),
+                    ),
+                    title: Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 6),
+                        Text(item['body'] ?? '', style: const TextStyle(color: Colors.blueGrey, fontSize: 13, height: 1.4)),
+                        const SizedBox(height: 8),
+                        Text(item['time'] ?? '', style: const TextStyle(color: Colors.black26, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// =========================================================================
+// 🌟 ENGINE SISTEM PENYIMPANAN NOTIFIKASI KE MEMORI LOKAL HP (SHARED PREF)
+// =========================================================================
+class ServiceNotifikasiLokal {
+  static const String _keyNotif = "histori_notif_aira";
+
+  static Future<void> simpanKeHistori(String title, String body) async {
+    final pref = await SharedPreferences.getInstance();
+    List<String> listMentah = pref.getStringList(_keyNotif) ?? [];
+    
+    final waktuSekarang = DateFormat('dd MMM, HH:mm').format(DateTime.now());
+    
+    Map<String, String> dataBaru = {
+      "title": title,
+      "body": body,
+      "time": waktuSekarang
+    };
+
+    listMentah.insert(0, jsonEncode(dataBaru)); // Pesan paling baru nangkring paling atas
+    await pref.setStringList(_keyNotif, listMentah);
+  }
+
+  static Future<List<Map<String, String>>> ambilHistori() async {
+    final pref = await SharedPreferences.getInstance();
+    List<String> listMentah = pref.getStringList(_keyNotif) ?? [];
+    
+    return listMentah.map((item) {
+      final Map<String, dynamic> peta = jsonDecode(item);
+      return peta.map((kunci, nilai) => MapEntry(kunci, nilai.toString()));
+    }).toList();
+  }
+
+  static Future<void> hapusSemua() async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.remove(_keyNotif);
   }
 }
