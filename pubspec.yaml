@@ -37,6 +37,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  # Library pembantu pembuat ikon otomatis agar normal tanpa error
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -46,3 +48,12 @@ flutter:
   # =========================================================================
   assets:
     - assets/ic_launcher.png
+
+# =========================================================================
+# KONFIGURASI OTOMATIS GENERATOR IKON APLIKASI AIRA EXAM
+# =========================================================================
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/ic_launcher.png"
+  min_sdk_android: 21

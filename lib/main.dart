@@ -60,6 +60,42 @@ class WelcomePage extends StatelessWidget {
     }
   }
 
+  // ================= SUNTIKAN BARU: CEK IZIN OVERLAY WINDOW =================
+  Future<void> _periksaDanMintaIzinOverlay(BuildContext context) async {
+    var status = await Permission.systemAlertWindow.status;
+
+    if (!status.isGranted) {
+      if (context.mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false, // Siswa wajib klik tombol
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Izin Keamanan Ujian",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              content: const Text(
+                "Untuk mencegah kecurangan dan gangguan panggilan saat ujian, "
+                "aplikasi ini memerlukan izin 'Tampilkan di atas aplikasi lain'. "
+                "Silakan aktifkan izin untuk AIRA EXAM di halaman setelah ini.",
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("BUKA PENGATURAN"),
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    // Membuka menu pengaturan Android secara otomatis
+                    await Permission.systemAlertWindow.request();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
+  }
+  // =========================================================================
+
   @override
   Widget build(BuildContext context) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
@@ -118,12 +154,30 @@ class WelcomePage extends StatelessWidget {
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const RuangUjianPage()),
-                      );
+                    onPressed: () async {
+                      // Amankan layar terdepan dulu sebelum pindah ke ruang ujian
+                      await _periksaDanMintaIzinOverlay(context);
+
+                      // Jika izin sudah diberikan, langsung gass masuk ruang ujian
+                      if (await Permission.systemAlertWindow.isGranted) {
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const RuangUjianPage()),
+                          );
+                        }
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: Colors.orange,
+                              content: Text(
+                                  'Anda harus mengizinkan fitur ini agar bisa ujian!'),
+                            ),
+                          );
+                        }
+                      }
                     },
                     icon: const Icon(Icons.play_arrow_rounded,
                         color: Colors.white),
