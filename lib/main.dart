@@ -35,7 +35,7 @@ void main() async {
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
 
   // 🔥 SILAKAN MASUKKAN NOMOR APP ID ONESIGNAL ASLI KAMU DI SINI:
-  OneSignal.initialize("TARUH_ONESIGNAL_APP_ID_KAMU_DISINI");
+  OneSignal.initialize("0b5ac2da-2c7c-4051-b579-d9efb7ed6609");
 
   OneSignal.Notifications.requestPermission(true);
 

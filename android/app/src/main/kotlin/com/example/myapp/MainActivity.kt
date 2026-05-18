@@ -1,44 +1,53 @@
-package com.example.aira_exam // SESUAIKAN dengan Application ID asli milikmu jika berbeda
+package com.example.aira_exam // 🌟 WAJIB: Pastikan ini sama dengan Package ID asli proyekmu
 
 import android.view.WindowManager
 import android.os.Bundle
+import android.content.Intent
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "flutter/launch"
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     override fun configureFlutterEngine(flutterEngine: io.flutter.embedding.engine.FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
+        // Satpam Jembatan Penghubung Flutter ke Sistem Android Native
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setWindowSecure") {
                 val secure = call.argument<Boolean>("secure") ?: false
-                if (secure) {
-                    // Kunci Layar agar tidak bisa di-screenshot / rekam layar
-                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                } else {
-                    // Lepas kunci saat keluar ujian
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                try {
+                    if (secure) {
+                        // Kunci Layar: Anti Screenshot & Anti Rekam Layar
+                        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    } else {
+                        // Lepas Kunci Jendela saat keluar ujian
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    }
+                    result.success(null)
+                } catch (e: Exception) {
+                    result.error("UNAVAILABLE", "Gagal mengatur flag jendela secure", e.message)
                 }
-                result.success(null)
             } else {
                 result.notImplemented()
             }
         }
     }
 
-    // 🚨 BENTENG UTAMA: JIKA SISWA NEKAT MENGUSAP STATUS BAR (NOTIFIKASI) DOWN, PAKSA TUTUP KEMBALI INSTAN!
+    // 🚨 BENTENG ANTI-USAP STATUS BAR (DIAMANKAN DENGAN TRY-CATCH AGAR ANTI-MENTAL / CRASH)
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus) {
-            // Sinyal bahwa ada usapan laci notifikasi masuk, paksa tutup kembali panelnya!
-            val closeIntent = android.content.Intent(android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-            sendBroadcast(closeIntent)
+            try {
+                // Trik taktis menutup paksa laci notifikasi/status bar secara instan saat diusap siswa
+                @Suppress("DEPRECATION")
+                val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+                sendBroadcast(closeIntent)
+            } catch (e: Exception) {
+                // Jika OS Android baru memblokir broadcast ini, biarkan sistem melewatkannya 
+                // tanpa harus membuat aplikasi crash/mental keluar (Aplikasi Tetap Hidup Standby!)
+            }
         }
     }
 }
