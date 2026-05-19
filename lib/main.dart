@@ -240,9 +240,7 @@ class _WelcomePageState extends State<WelcomePage> {
               title: const Row(
                 children: [
                   Icon(Icons.gavel_rounded, color: Color(0xFF6C5CE7)),
-                  SizedBox(
-                      width:
-                          10), // 🌟 FIX 2: Diubah dari typo SAuthorized kembali ke SizedBox(width: 10)
+                  SizedBox(width: 10),
                   Text("Protokol Ujian",
                       style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
@@ -275,7 +273,6 @@ class _WelcomePageState extends State<WelcomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FC),
-      // TOMBOL IKON KOTAK MASUK NOTIFIKASI DI BAR ATAS WELCOME PAGE
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -476,7 +473,6 @@ class _WelcomePageState extends State<WelcomePage> {
                     const SizedBox(height: 14),
                     Row(
                       children: [
-                        // 🌟 FIX 1: Kata 'const' dihapus dari baris Row ini agar element list-nya tidak memicu eror non_constant_list_element
                         Expanded(
                           child: SizedBox(
                             height: 52,
@@ -627,9 +623,9 @@ class _RuangUjianPageState extends State<RuangUjianPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // [BENTENG 3]: SATPAM LIFE-CYCLE MONITORING INTEGRITAS TINGGI JIKA APPS PINDAH LAYER
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
+    // 🌟 BENTENG 3 FIX: Hanya menendang siswa jika aplikasi beneran mati total/paused ditinggal buka aplikasi lain.
+    // Keadaan 'inactive' (goyang layar akibat keyboard) akan diabaikan demi kenyamanan ketik siswa.
+    if (state == AppLifecycleState.paused) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
       if (mounted) {
@@ -643,7 +639,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
             backgroundColor: Colors.red,
             duration: Duration(seconds: 8),
             content: Text(
-              'STRUKTUR JENDELA TERGANGGU / PINDAH FOKUS LAYAR TERDETEKSI! SESI ANDA DIHANGUSKAN UTOMATIS!',
+              'STRUKTUR JENDELA TERGANGGU / PINDAH FOKUS LAYAR TERDETEKSI! SESI ANDA DIHANGUSKAN OTOMATIS!',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -725,7 +721,6 @@ class _RuangUjianPageState extends State<RuangUjianPage>
 
   @override
   Widget build(BuildContext context) {
-    // SUNTIKAN BENTENG 4: POPSCOPE TERBARU (MENGUNCI PHYSICAL BACK BUTTON HP MUTLAK)
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
@@ -736,6 +731,8 @@ class _RuangUjianPageState extends State<RuangUjianPage>
         }
       },
       child: Scaffold(
+        resizeToAvoidBottomInset:
+            false, // 🌟 SUNTIKAN ANTI-TENDANG: Keyboard naik tidak akan merusak layout atau memicu satpam
         backgroundColor: Colors.white,
         body: Column(
           children: [
@@ -982,8 +979,7 @@ class ServiceNotifikasiLokal {
       "time": waktuSekarang
     };
 
-    listMentah.insert(
-        0, jsonEncode(dataBaru)); // Pesan paling baru nangkring paling atas
+    listMentah.insert(0, jsonEncode(dataBaru));
     await pref.setStringList(_keyNotif, listMentah);
   }
 
