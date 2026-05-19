@@ -182,10 +182,23 @@ class WelcomePage extends StatefulWidget {
 }
 
 class _WelcomePageState extends State<WelcomePage> {
+  int _jumlahNotif = 0;
+
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _hitungNotifLokal();
+  }
+
+  // Fungsi dinamis menghitung isi data SharedPreferences lokal untuk indikator angka
+  Future<void> _hitungNotifLokal() async {
+    final data = await ServiceNotifikasiLokal.ambilHistori();
+    if (mounted) {
+      setState(() {
+        _jumlahNotif = data.length;
+      });
+    }
   }
 
   void _bukaWhatsAppAdmin() async {
@@ -269,6 +282,121 @@ class _WelcomePageState extends State<WelcomePage> {
     }
   }
 
+  // 🌟 SELEKSI PAKTA INTEGRITAS: Pop up syarat wajib sebelum membuka portal ujian
+  Future<bool> _tampilkanKonfirmasiPaktaIntegritas(BuildContext context) async {
+    bool? hasilKonfirmasi = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  color: Color(0xFFFFD200), size: 28),
+              SizedBox(width: 10),
+              Text("Konfirmasi Sesi Ujian",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Color(0xFF1E293B))),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Harap perhatikan seluruh aturan ruang ujian demi menjaga integritas data:",
+                style: TextStyle(
+                    fontSize: 13, color: Colors.blueGrey, height: 1.4),
+              ),
+              SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("1. ",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent)),
+                  Expanded(
+                      child: Text(
+                          "Nyalakan mode jangan ganggu (Do Not Disturb).",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600))),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("2. ",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent)),
+                  Expanded(
+                      child: Text(
+                          "Jangan usap layar ke bawah atau memunculkan bilah notifikasi, jika terdeteksi sistem Anda akan langsung ditendang otomatis.",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600))),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("3. ",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent)),
+                  Expanded(
+                      child: Text("Jangan berbuat curang dalam bentuk apa pun.",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600))),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("4. ",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.green)),
+                  Expanded(
+                      child: Text(
+                          "Kerjakan ujian dengan baik, jujur, dan benar.",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600))),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("BATALKAN",
+                  style: TextStyle(
+                      color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C5CE7),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("MULAI",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+    return hasilKonfirmasi ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -278,16 +406,47 @@ class _WelcomePageState extends State<WelcomePage> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_active_rounded,
-                color: Color(0xFF6C5CE7), size: 26),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const KotakNotifikasiPage()),
-              );
-            },
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_active_rounded,
+                    color: Color(0xFF6C5CE7), size: 26),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const KotakNotifikasiPage()),
+                  );
+                  _hitungNotifLokal();
+                },
+              ),
+              if (_jumlahNotif > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      '$_jumlahNotif',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+            ],
           ),
           const SizedBox(width: 16),
         ],
@@ -431,12 +590,18 @@ class _WelcomePageState extends State<WelcomePage> {
 
                           if (isWindowOk) {
                             if (context.mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const RuangUjianPage()),
-                              );
+                              bool gasUjian =
+                                  await _tampilkanKonfirmasiPaktaIntegritas(
+                                      context);
+
+                              if (gasUjian && context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const HalamanLoadingPortal()),
+                                );
+                              }
                             }
                           } else {
                             if (context.mounted) {
@@ -526,6 +691,158 @@ class _WelcomePageState extends State<WelcomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// HALAMAN BARU: TRANSISI LOADING MASUK PORTAL SUPER KEREN & ANIMATIF (CSS STYLE)
+// =========================================================================
+class HalamanLoadingPortal extends StatefulWidget {
+  const HalamanLoadingPortal({super.key});
+
+  @override
+  State<HalamanLoadingPortal> createState() => _HalamanLoadingPortalState();
+}
+
+class _HalamanLoadingPortalState extends State<HalamanLoadingPortal>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  double _progressValue = 0.0;
+  late Timer _progressTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // Animasi detak logo membesar mengecil mulus mirip efek CSS pulse glow
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    // Simulasi loading progress bar mewah menuju server CAT bimbemu
+    _progressTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      setState(() {
+        if (_progressValue < 1.0) {
+          _progressValue += 0.01;
+        } else {
+          _progressTimer.cancel();
+          _bukaRuangUjianAsli();
+        }
+      });
+    });
+  }
+
+  void _bukaRuangUjianAsli() {
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const RuangUjianPage()),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _progressTimer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor:
+          const Color(0xFF0F172A), // Latar gelap pekat premium mewah
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment
+                .center, // 🌟 FIX TYPO: Diubah dari Main=====.center kembali ke jalan yang lurus
+            children: [
+              AnimatedBuilder(
+                animation: _animController,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: 1.0 + (_animController.value * 0.06),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C5CE7).withOpacity(0.05),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6C5CE7)
+                                .withOpacity(0.2 * _animController.value),
+                            blurRadius: 30,
+                            spreadRadius: 5,
+                          )
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/ic_launcher.png',
+                          width: 110,
+                          height: 110,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                            Icons.lock_person_rounded,
+                            size: 70,
+                            color: Color(0xFFFFD200),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 35),
+              const Text(
+                "SINKRONISASI PORTAL SECURE",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Membangun enkripsi tirai baja ruang ujian...",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.5),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 40),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: _progressValue,
+                  backgroundColor: Colors.white.withOpacity(0.05),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(Color(0xFFFFD200)),
+                  minHeight: 5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "${(_progressValue * 100).toInt()}% READY",
+                style: const TextStyle(
+                  color: Color(0xFFFFD200),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -623,8 +940,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // 🌟 BENTENG 3 FIX: Hanya menendang siswa jika aplikasi beneran mati total/paused ditinggal buka aplikasi lain.
-    // Keadaan 'inactive' (goyang layar akibat keyboard) akan diabaikan demi kenyamanan ketik siswa.
+    // 🌟 LOCK KEYBOARD FIX DETEKSI: Hanya eksekusi tendang otomatis jika statusnya 'paused' (Aplikasi benar-benar ditutup/ditinggal)
     if (state == AppLifecycleState.paused) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
@@ -639,7 +955,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
             backgroundColor: Colors.red,
             duration: Duration(seconds: 8),
             content: Text(
-              'STRUKTUR JENDELA TERGANGGU / PINDAH FOKUS LAYAR TERDETEKSI! SESI ANDA DIHANGUSKAN OTOMATIS!',
+              'STRUKTUR JENDELA TERGANGGU / PINDAH FOKUS LAYAR TERDETEKSI! SESI ANDA DIHANGUSKAN UTOMATIS!',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -731,8 +1047,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
         }
       },
       child: Scaffold(
-        resizeToAvoidBottomInset:
-            false, // 🌟 SUNTIKAN ANTI-TENDANG: Keyboard naik tidak akan merusak layout atau memicu satpam
+        resizeToAvoidBottomInset: false, // 🌟 LOCK KEYBOARD FIX
         backgroundColor: Colors.white,
         body: Column(
           children: [
@@ -838,6 +1153,9 @@ class _RuangUjianPageState extends State<RuangUjianPage>
   }
 }
 
+// =========================================================================
+// 🌟 CLASS SYSTEM LAUNCHER (Tetap siaga di posisi aman)
+// =========================================================================
 class SystemLauncher {
   static const MethodChannel _channel = MethodChannel('aira.exam/launch');
   static Future<void> setWindowSecure(bool secure) async {
@@ -873,11 +1191,53 @@ class _KotakNotifikasiPageState extends State<KotakNotifikasiPage> {
     });
   }
 
-  Future<void> _bersihkanSemuaHistori() async {
-    await ServiceNotifikasiLokal.hapusSemua();
-    setState(() {
-      _listNotif.clear();
-    });
+  Future<void> _tampilkanKonfirmasiHapusSemua() async {
+    bool? setujuHapus = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
+              SizedBox(width: 10),
+              Text("Kosongkan Kotak Masuk?",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: const Text(
+              "Seluruh riwayat pengumuman dan token ujian lama akan dihapus permanen dari memori HP Anda."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("BATAL",
+                  style: TextStyle(
+                      color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("YA, HAPUS",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (setujuHapus == true) {
+      await ServiceNotifikasiLokal.hapusSemua();
+      setState(() {
+        _listNotif.clear();
+      });
+    }
   }
 
   @override
@@ -895,7 +1255,7 @@ class _KotakNotifikasiPageState extends State<KotakNotifikasiPage> {
             IconButton(
               icon: const Icon(Icons.delete_sweep_rounded,
                   color: Colors.redAccent, size: 26),
-              onPressed: _bersihkanSemuaHistori,
+              onPressed: _tampilkanKonfirmasiHapusSemua,
             ),
           const SizedBox(width: 8),
         ],
