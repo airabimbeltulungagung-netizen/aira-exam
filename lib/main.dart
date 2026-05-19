@@ -36,7 +36,7 @@ void main() async {
   // 4. INTEGRASI ONESIGNAL PUSH BROADCAST
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
 
-  // 🔥 SILAKAN MASUKKAN NOMOR APP ID ONESIGNAL ASLI KAMU DI SINI:
+  // 🔥 NOMOR APP ID ONESIGNAL ASLI KAMU YANG SUDAH AKTIF:
   OneSignal.initialize("0b5ac2da-2c7c-4051-b579-d9efb7ed6609");
 
   OneSignal.Notifications.requestPermission(true);
@@ -590,6 +590,7 @@ class _WelcomePageState extends State<WelcomePage> {
 
                           if (isWindowOk) {
                             if (context.mounted) {
+                              // 🌟 PEMICU UTAMA DIALOG BENTENG PROTOKOL
                               bool gasUjian =
                                   await _tampilkanKonfirmasiPaktaIntegritas(
                                       context);
@@ -761,8 +762,7 @@ class _HalamanLoadingPortalState extends State<HalamanLoadingPortal>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment
-                .center, // 🌟 FIX TYPO: Diubah dari Main=====.center kembali ke jalan yang lurus
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               AnimatedBuilder(
                 animation: _animController,
@@ -889,6 +889,16 @@ class _RuangUjianPageState extends State<RuangUjianPage>
 
     // [BENTENG 1]: LAYAR FULL SECURE WINDOW DIRECT NATIVE
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    // 🌟 LOGIKA GEMBOK USAP ATAS: Paksa status bar ngumpet kembali dalam waktu setengah detik (500ms)!
+    SystemChrome.setSystemUIChangeCallback(
+        (bool systemUserInterfaceIsVisible) async {
+      if (systemUserInterfaceIsVisible) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
+    });
+
     SystemLauncher.setWindowSecure(true);
 
     _updateTime();
@@ -1154,7 +1164,7 @@ class _RuangUjianPageState extends State<RuangUjianPage>
 }
 
 // =========================================================================
-// 🌟 CLASS SYSTEM LAUNCHER (Tetap siaga di posisi aman)
+// 🌟 CLASS SYSTEM LAUNCHER (Aman Berdiri Tegak Tanpa Geser)
 // =========================================================================
 class SystemLauncher {
   static const MethodChannel _channel = MethodChannel('aira.exam/launch');
