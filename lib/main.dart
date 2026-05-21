@@ -1,58 +1,54 @@
 import 'dart:async';
-import 'dart:convert'; // Untuk kebutuhan engine histori notifikasi JSON
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ================= PERLENGKAPAN BENTENG KEAMANAN & NOTIFIKASI =================
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Untuk engine penyimpanan inbox lokal
-// =============================================================================
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. EMBED FULL SCREEN PROTOKOL (Menghilangkan total bar atas & bawah Android)
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-  // 2. KUNCI ROTASI LAYAR MUTLAK (Mencegah trik bypass split-screen via rotasi otomatis)
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // 3. INIT ENGINE DOWNLOADER
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
   await FlutterDownloader.initialize(
     debug: true,
     ignoreSsl: true,
   );
 
-  // 4. INTEGRASI ONESIGNAL PUSH BROADCAST
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
 
-  // 🔥 NOMOR APP ID ONESIGNAL ASLI KAMU YANG SUDAH AKTIF:
-  OneSignal.initialize("0b5ac2da-2c7c-4051-b579-d9efb7ed6609");
+  OneSignal.initialize(
+    "0b5ac2da-2c7c-4051-b579-d9efb7ed6609",
+  );
 
   OneSignal.Notifications.requestPermission(true);
 
-  // 🌟 JALUR FOREGROUND MONITOR: Ambil info siaran OneSignal saat apps terbuka
   OneSignal.Notifications.addForegroundWillDisplayListener((event) async {
     final title = event.notification.title ?? "Pengumuman AIRA";
     final body = event.notification.body ?? "";
+
     await ServiceNotifikasiLokal.simpanKeHistori(title, body);
   });
 
-  // 🌟 JALUR BACK GROUND/KILLED BYPASS (SOLUSI HEMAT SERVER):
-  // Saat HP offline/apps mati, notifikasi di-klik siswa -> Tangkap datanya -> Simpan ke SharedPreferences lokal HP!
   OneSignal.Notifications.addClickListener((event) async {
     final title = event.notification.title ?? "Pengumuman AIRA";
     final body = event.notification.body ?? "";
+
     await ServiceNotifikasiLokal.simpanKeHistori(title, body);
   });
 
@@ -65,26 +61,20 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AIRA EXAM',
       debugShowCheckedModeBanner: false,
+      title: "AIRA EXAM",
       theme: ThemeData(
+        useMaterial3: true,
         fontFamily: 'Roboto',
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6C5CE7),
-          primary: const Color(0xFF6C5CE7),
-          secondary: const Color(0xFFFFD200),
         ),
-        useMaterial3: true,
       ),
-      // PERUBAHAN GERBANG UTAMA: Langsung diarahkan ke Splash Screen Loading Estetik
       home: const HalamanLoadingAwal(),
     );
   }
 }
 
-// =========================================================================
-// TAMPILAN BARU: SPLASH SCREEN LOADING AWAL YANG ESTETIK & PREMIUM
-// =========================================================================
 class HalamanLoadingAwal extends StatefulWidget {
   const HalamanLoadingAwal({super.key});
 
@@ -96,24 +86,27 @@ class _HalamanLoadingAwalState extends State<HalamanLoadingAwal> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-    // Timer 3 detik untuk loading awal, setelah selesai ganti ke WelcomePage secara mulus
-    Timer(const Duration(milliseconds: 3000), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const WelcomePage()),
-        );
-      }
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+    );
+
+    Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const WelcomePage(),
+        ),
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(
-          0xFF1E293B), // Background gelap mahal ala EdTech Enterprise
+      backgroundColor: const Color(0xFF1E293B),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -121,7 +114,7 @@ class _HalamanLoadingAwalState extends State<HalamanLoadingAwal> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
+                color: Colors.white.withValues(alpha: 0.03),
                 shape: BoxShape.circle,
               ),
               child: ClipOval(
@@ -130,11 +123,13 @@ class _HalamanLoadingAwalState extends State<HalamanLoadingAwal> {
                   width: 115,
                   height: 115,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.shield_rounded,
-                    size: 80,
-                    color: Color(0xFF6C5CE7),
-                  ),
+                  errorBuilder: (_, __, ___) {
+                    return const Icon(
+                      Icons.shield_rounded,
+                      size: 80,
+                      color: Color(0xFF6C5CE7),
+                    );
+                  },
                 ),
               ),
             ),
@@ -142,27 +137,21 @@ class _HalamanLoadingAwalState extends State<HalamanLoadingAwal> {
             const Text(
               'AIRA EXAM SYSTEM',
               style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: 0.8),
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Secure, Integrity, & Professional EdTech',
               style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.4),
-                  letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 60),
-            const SizedBox(
-              width: 26,
-              height: 26,
-              child: CircularProgressIndicator(
-                color: Color(0xFFFFD200),
-                strokeWidth: 3,
+                color: Colors.white.withValues(alpha: 0.4),
               ),
+            ),
+            const SizedBox(height: 50),
+            const CircularProgressIndicator(
+              color: Color(0xFFFFD200),
             ),
           ],
         ),
@@ -171,9 +160,6 @@ class _HalamanLoadingAwalState extends State<HalamanLoadingAwal> {
   }
 }
 
-// =========================================================================
-// 1. GATEWAY HALAMAN UTAMA (STERIL - AMAN DARI PENGUNCIAN AWAL)
-// =========================================================================
 class WelcomePage extends StatefulWidget {
   const WelcomePage({super.key});
 
@@ -187,214 +173,75 @@ class _WelcomePageState extends State<WelcomePage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    _hitungNotifLokal();
+    _hitungNotif();
   }
 
-  // Fungsi dinamis menghitung isi data SharedPreferences lokal untuk indikator angka
-  Future<void> _hitungNotifLokal() async {
+  Future<void> _hitungNotif() async {
     final data = await ServiceNotifikasiLokal.ambilHistori();
-    if (mounted) {
-      setState(() {
-        _jumlahNotif = data.length;
-      });
-    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _jumlahNotif = data.length;
+    });
   }
 
-  void _bukaWhatsAppAdmin() async {
-    const String nomorWA = "6285704351856";
-    const String pesanOtomatis =
-        "Halo Admin, saya mau meminta kartu ujian and token AIRA EXAM.";
+  Future<void> _bukaWA() async {
     final Uri url = Uri.parse(
-        "https://wa.me/$nomorWA?text=${Uri.encodeComponent(pesanOtomatis)}");
+      "https://wa.me/6285704351856",
+    );
 
-    try {
-      await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.orange,
-            content: Text(
-                'Gagal membuka WhatsApp. Pastikan aplikasi WA aktif di HP.'),
-          ),
-        );
-      }
-    }
+    await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
+    );
   }
 
-  void _bukaWebsiteAira() async {
-    final Uri url = Uri.parse("https://airabimbel.biz.id");
-    try {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.redAccent,
-            content: Text('Gagal memuat peramban luar. Sinyal tidak menentu.'),
-          ),
-        );
-      }
-    }
+  Future<void> _bukaWeb() async {
+    final Uri url = Uri.parse(
+      "https://airabimbel.biz.id",
+    );
+
+    await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
+    );
   }
 
-  Future<void> _validasiDanMintaAksesIzin(BuildContext context) async {
-    var statusWindow = await Permission.systemAlertWindow.status;
-    if (!statusWindow.isGranted) {
-      if (context.mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              title: const Row(
-                children: [
-                  Icon(Icons.gavel_rounded, color: Color(0xFF6C5CE7)),
-                  SizedBox(width: 10),
-                  Text("Protokol Ujian",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-              content: const Text(
-                "Aplikasi memerlukan otoritas 'Tampilkan di atas aplikasi lain' "
-                "agar sistem ruang ujian berjalan steril dari hamparan aplikasi luar. "
-                "Silakan berikan izin pada menu setelah ini.",
-              ),
-              actions: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C5CE7),
-                      foregroundColor: Colors.white),
-                  child: const Text("BUKA PENGATURAN"),
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await Permission.systemAlertWindow.request();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
-    }
-  }
-
-  // 🌟 SELEKSI PAKTA INTEGRITAS: Pop up syarat wajib sebelum membuka portal ujian
-  Future<bool> _tampilkanKonfirmasiPaktaIntegritas(BuildContext context) async {
-    bool? hasilKonfirmasi = await showDialog<bool>(
+  Future<bool> _pakta() async {
+    final hasil = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (_) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: Color(0xFFFFD200), size: 28),
-              SizedBox(width: 10),
-              Text("Konfirmasi Sesi Ujian",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Color(0xFF1E293B))),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Harap perhatikan seluruh aturan ruang ujian demi menjaga integritas data:",
-                style: TextStyle(
-                    fontSize: 13, color: Colors.blueGrey, height: 1.4),
-              ),
-              SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("1. ",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent)),
-                  Expanded(
-                      child: Text(
-                          "Nyalakan mode jangan ganggu (Do Not Disturb).",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600))),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("2. ",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent)),
-                  Expanded(
-                      child: Text(
-                          "Jangan usap layar ke bawah atau memunculkan bilah notifikasi, jika terdeteksi sistem Anda akan langsung ditendang otomatis.",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600))),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("3. ",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.redAccent)),
-                  Expanded(
-                      child: Text("Jangan berbuat curang dalam bentuk apa pun.",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600))),
-                ],
-              ),
-              SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("4. ",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.green)),
-                  Expanded(
-                      child: Text(
-                          "Kerjakan ujian dengan baik, jujur, dan benar.",
-                          style: TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w600))),
-                ],
-              ),
-            ],
+          title: const Text(
+            "Konfirmasi Sesi Ujian",
+          ),
+          content: const Text(
+            "Pastikan Anda siap memulai ujian.",
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("BATALKAN",
-                  style: TextStyle(
-                      color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text("BATAL"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C5CE7),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("MULAI",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text("MULAI"),
             ),
           ],
         );
       },
     );
-    return hasilKonfirmasi ?? false;
+
+    return hasil ?? false;
   }
 
   @override
@@ -403,442 +250,117 @@ class _WelcomePageState extends State<WelcomePage> {
       backgroundColor: const Color(0xFFF4F6FC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
         actions: [
           Stack(
-            alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_active_rounded,
-                    color: Color(0xFF6C5CE7), size: 26),
+                icon: const Icon(
+                  Icons.notifications_active_rounded,
+                  color: Color(0xFF6C5CE7),
+                ),
                 onPressed: () async {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => const KotakNotifikasiPage()),
+                      builder: (_) => const KotakNotifikasiPage(),
+                    ),
                   );
-                  _hitungNotifLokal();
+
+                  _hitungNotif();
                 },
               ),
               if (_jumlahNotif > 0)
                 Positioned(
-                  top: 6,
                   right: 6,
+                  top: 6,
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: Colors.redAccent,
+                      color: Colors.red,
                       shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
                     ),
                     child: Text(
                       '$_jumlahNotif',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 )
             ],
-          ),
-          const SizedBox(width: 16),
+          )
         ],
       ),
-      body: Stack(
-        children: [
-          Positioned(
-            top: -60,
-            left: -60,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6C5CE7).withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 28.0, vertical: 24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C5CE7).withOpacity(0.2),
-                            blurRadius: 25,
-                            offset: const Offset(0, 10),
-                          )
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/ic_launcher.png',
-                          width: 105,
-                          height: 105,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                            Icons.shield_rounded,
-                            size: 75,
-                            color: Color(0xFF6C5CE7),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 25),
-                    const Text(
-                      'AIRA EXAM SYSTEM',
-                      style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF1E293B),
-                          letterSpacing: 0.5),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFD200).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'MAXIMUM HARDENING SECURITY v2.5',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFD4A373)),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    const Text(
-                      'Portal Penyelenggaraan Ujian Digital Integritas Tinggi.\nPastikan Anda telah menerima token ujian dari panitia.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 13, color: Colors.blueGrey, height: 1.5),
-                    ),
-                    const SizedBox(height: 35),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border:
-                            Border.all(color: Colors.black12.withOpacity(0.05)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.verified_user_rounded,
-                                  color: Colors.green, size: 20),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                    'Sistem Keamanan Fokus Jendela Native Aktif',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF1E293B))),
-                              )
-                            ],
-                          ),
-                          SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Icon(Icons.no_photography_rounded,
-                                  color: Colors.redAccent, size: 20),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                    'Blokir Total Screenshot & Perekaman Layar OS',
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF1E293B))),
-                              )
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 35),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await _validasiDanMintaAksesIzin(context);
-                          var isWindowOk =
-                              await Permission.systemAlertWindow.isGranted;
-
-                          if (isWindowOk) {
-                            if (context.mounted) {
-                              // 🌟 PEMICU UTAMA DIALOG BENTENG PROTOKOL
-                              bool gasUjian =
-                                  await _tampilkanKonfirmasiPaktaIntegritas(
-                                      context);
-
-                              if (gasUjian && context.mounted) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          const HalamanLoadingPortal()),
-                                );
-                              }
-                            }
-                          } else {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  backgroundColor: Colors.amber,
-                                  content: Text(
-                                      'Seluruh izin wajib diaktifkan demi integritas ujian!',
-                                      style: TextStyle(
-                                          color: Colors.black,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.login_rounded,
-                            color: Colors.white),
-                        label: const Text('MULAI UJIAN SEKARANG',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                letterSpacing: 1)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C5CE7),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          elevation: 4,
-                          shadowColor: const Color(0xFF6C5CE7).withOpacity(0.4),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: _bukaWhatsAppAdmin,
-                              icon: const Icon(
-                                  Icons.chat_bubble_outline_rounded,
-                                  color: Colors.green,
-                                  size: 18),
-                              label: const Text('CHAT ADMIN',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Color(0xFF1E293B))),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                    color: Colors.green, width: 1.2),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: _bukaWebsiteAira,
-                              icon: const Icon(Icons.language_rounded,
-                                  color: Color(0xFF6C5CE7), size: 18),
-                              label: const Text('WEB UTAMA',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: Color(0xFF1E293B))),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                    color: Color(0xFF6C5CE7), width: 1.2),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =========================================================================
-// HALAMAN BARU: TRANSISI LOADING MASUK PORTAL SUPER KEREN & ANIMATIF (CSS STYLE)
-// =========================================================================
-class HalamanLoadingPortal extends StatefulWidget {
-  const HalamanLoadingPortal({super.key});
-
-  @override
-  State<HalamanLoadingPortal> createState() => _HalamanLoadingPortalState();
-}
-
-class _HalamanLoadingPortalState extends State<HalamanLoadingPortal>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  double _progressValue = 0.0;
-  late Timer _progressTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    // Animasi detak logo membesar mengecil mulus mirip efek CSS pulse glow
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-
-    // Simulasi loading progress bar mewah menuju server CAT bimbemu
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
-      setState(() {
-        if (_progressValue < 1.0) {
-          _progressValue += 0.01;
-        } else {
-          _progressTimer.cancel();
-          _bukaRuangUjianAsli();
-        }
-      });
-    });
-  }
-
-  void _bukaRuangUjianAsli() {
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const RuangUjianPage()),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    _progressTimer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor:
-          const Color(0xFF0F172A), // Latar gelap pekat premium mewah
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedBuilder(
-                animation: _animController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: 1.0 + (_animController.value * 0.06),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6C5CE7).withOpacity(0.05),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C5CE7)
-                                .withOpacity(0.2 * _animController.value),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          )
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/ic_launcher.png',
-                          width: 110,
-                          height: 110,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                            Icons.lock_person_rounded,
-                            size: 70,
-                            color: Color(0xFFFFD200),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+              ClipOval(
+                child: Image.asset(
+                  'assets/ic_launcher.png',
+                  width: 110,
+                  height: 110,
+                  fit: BoxFit.cover,
+                ),
               ),
-              const SizedBox(height: 35),
+              const SizedBox(height: 25),
               const Text(
-                "SINKRONISASI PORTAL SECURE",
+                "AIRA EXAM SYSTEM",
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                "Membangun enkripsi tirai baja ruang ujian...",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
-                  fontSize: 12,
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C5CE7),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () async {
+                    bool lanjut = await _pakta();
+
+                    if (!lanjut) return;
+
+                    if (!mounted) return;
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const HalamanLoadingPortal(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.login_rounded),
+                  label: const Text(
+                    "MULAI UJIAN SEKARANG",
+                  ),
                 ),
               ),
-              const SizedBox(height: 40),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: _progressValue,
-                  backgroundColor: Colors.white.withOpacity(0.05),
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(Color(0xFFFFD200)),
-                  minHeight: 5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "${(_progressValue * 100).toInt()}% READY",
-                style: const TextStyle(
-                  color: Color(0xFFFFD200),
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _bukaWA,
+                      icon: const Icon(Icons.chat),
+                      label: const Text("CHAT ADMIN"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _bukaWeb,
+                      icon: const Icon(Icons.language),
+                      label: const Text("WEB UTAMA"),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -848,9 +370,105 @@ class _HalamanLoadingPortalState extends State<HalamanLoadingPortal>
   }
 }
 
-// =========================================================================
-// 2. RUANG UJIAN HARDENING (BENTENG UTAMA SEKARANG UTUH & PRESISI)
-// =========================================================================
+class HalamanLoadingPortal extends StatefulWidget {
+  const HalamanLoadingPortal({super.key});
+
+  @override
+  State<HalamanLoadingPortal> createState() => _HalamanLoadingPortalState();
+}
+
+class _HalamanLoadingPortalState extends State<HalamanLoadingPortal>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  double progress = 0;
+
+  Timer? timer;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    timer = Timer.periodic(
+      const Duration(milliseconds: 30),
+      (t) {
+        if (!mounted) return;
+
+        setState(() {
+          progress += 0.01;
+        });
+
+        if (progress >= 1) {
+          t.cancel();
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const RuangUjianPage(),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleTransition(
+                scale: Tween<double>(
+                  begin: 1,
+                  end: 1.08,
+                ).animate(_controller),
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/ic_launcher.png',
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 35),
+              const Text(
+                "SINKRONISASI PORTAL SECURE",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              LinearProgressIndicator(
+                value: progress,
+                color: const Color(0xFFFFD200),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class RuangUjianPage extends StatefulWidget {
   const RuangUjianPage({super.key});
 
@@ -861,186 +479,143 @@ class RuangUjianPage extends StatefulWidget {
 class _RuangUjianPageState extends State<RuangUjianPage>
     with WidgetsBindingObserver {
   late final WebViewController _webController;
-  bool _isLoading = true;
+
+  bool _loading = true;
 
   final Battery _battery = Battery();
-  int _batteryLevel = 100;
-  String _connectionStatus = 'Online';
-  String _timeString = '';
-  late Timer _timer;
 
-  Future<void> downloadApk(String url) async {
-    await Permission.storage.request();
-    await Permission.manageExternalStorage.request();
+  int batteryLevel = 100;
 
-    await FlutterDownloader.enqueue(
-      url: url,
-      savedDir: '/storage/emulated/0/Download',
-      fileName: 'AIRA_EXAM.apk',
-      showNotification: true,
-      openFileFromNotification: true,
-    );
-  }
+  String jam = "";
+
+  String koneksi = "Online";
+
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addObserver(this);
 
-    // [BENTENG 1]: LAYAR FULL SECURE WINDOW DIRECT NATIVE
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    // 🌟 LOGIKA GEMBOK USAP ATAS: Paksa status bar ngumpet kembali dalam waktu setengah detik (500ms)!
-    SystemChrome.setSystemUIChangeCallback(
-        (bool systemUserInterfaceIsVisible) async {
-      if (systemUserInterfaceIsVisible) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      }
-    });
-
-    SystemLauncher.setWindowSecure(true);
-
-    _updateTime();
-    _getBatteryInfo();
-    _checkConnectivity();
-    _timer =
-        Timer.periodic(const Duration(seconds: 1), (Timer t) => _updateTime());
-
-    final String antiCacheUrl =
-        'https://airabimbel.biz.id/ujian_sekolah/login.php?t=${DateTime.now().millisecondsSinceEpoch}';
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+    );
 
     _webController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageStarted: (url) => setState(() => _isLoading = true),
-          onPageFinished: (url) {
-            setState(() => _isLoading = false);
-
-            // [BENTENG 2]: INJEKSI JAVASCRIPT ANTI SELEKSI / TRANS-COPY
-            _webController.runJavaScript('''
-              document.body.style.webkitUserSelect = "none";
-              document.body.style.userSelect = "none";
-              document.addEventListener('contextmenu', event => event.preventDefault());
-              document.addEventListener('selectstart', event => event.preventDefault());
-              document.addEventListener('copy', event => event.preventDefault());
-              document.addEventListener('cut', event => event.preventDefault());
-              document.addEventListener('paste', event => event.preventDefault());
-            ''');
-          },
-          onNavigationRequest: (NavigationRequest request) async {
-            if (request.url.endsWith(".apk")) {
-              await downloadApk(request.url);
-              return NavigationDecision.prevent;
+          onPageStarted: (_) {
+            if (mounted) {
+              setState(() {
+                _loading = true;
+              });
             }
-            return NavigationDecision.navigate;
+          },
+          onPageFinished: (_) async {
+            if (!mounted) return;
+
+            setState(() {
+              _loading = false;
+            });
+
+            await _webController.runJavaScript('''
+              document.body.style.webkitUserSelect='none';
+              document.body.style.userSelect='none';
+            ''');
           },
         ),
       )
-      ..loadRequest(Uri.parse(antiCacheUrl));
+      ..loadRequest(
+        Uri.parse(
+          'https://airabimbel.biz.id/ujian_sekolah/login.php?t=${DateTime.now().millisecondsSinceEpoch}',
+        ),
+      );
+
+    _updateJam();
+
+    timer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        _updateJam();
+      },
+    );
+
+    _getBattery();
+
+    _getConnection();
   }
 
-  void _refreshHalamanWeb() {
-    _webController.reload();
-  }
+  void _updateJam() {
+    jam = DateFormat('HH:mm').format(DateTime.now());
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    // 🌟 LOCK KEYBOARD FIX DETEKSI: Hanya eksekusi tendang otomatis jika statusnya 'paused' (Aplikasi benar-benar ditutup/ditinggal)
-    if (state == AppLifecycleState.paused) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-      if (mounted) {
-        WebViewCookieManager().clearCookies();
-        SystemLauncher.setWindowSecure(false);
-
-        Navigator.of(context).popUntil((route) => route.isFirst);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 8),
-            content: Text(
-              'STRUKTUR JENDELA TERGANGGU / PINDAH FOKUS LAYAR TERDETEKSI! SESI ANDA DIHANGUSKAN UTOMATIS!',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        );
-      }
+    if (mounted) {
+      setState(() {});
     }
   }
 
-  void _updateTime() {
-    final String formattedDateTime = DateFormat('HH:mm').format(DateTime.now());
-    if (mounted) setState(() => _timeString = formattedDateTime);
-  }
-
-  void _getBatteryInfo() async {
+  Future<void> _getBattery() async {
     try {
       final level = await _battery.batteryLevel;
-      if (mounted) setState(() => _batteryLevel = level);
+
+      if (!mounted) return;
+
+      setState(() {
+        batteryLevel = level;
+      });
     } catch (_) {}
   }
 
-  void _checkConnectivity() async {
-    final List<ConnectivityResult> result =
-        await Connectivity().checkConnectivity();
-    if (mounted) {
-      if (result.contains(ConnectivityResult.none)) {
-        setState(() => _connectionStatus = 'Offline');
-      } else if (result.contains(ConnectivityResult.wifi)) {
-        setState(() => _connectionStatus = 'WiFi');
-      } else {
-        setState(() => _connectionStatus = 'Online');
-      }
+  Future<void> _getConnection() async {
+    final result = await Connectivity().checkConnectivity();
+
+    if (!mounted) return;
+
+    if (result.contains(ConnectivityResult.none)) {
+      koneksi = "Offline";
+    } else if (result.contains(ConnectivityResult.wifi)) {
+      koneksi = "WiFi";
+    } else {
+      koneksi = "Online";
     }
+
+    setState(() {});
   }
 
-  Future<void> _eksekusiKeluarResmi() async {
-    await WebViewCookieManager().clearCookies();
-    SystemLauncher.setWindowSecure(false);
-    if (mounted) {
-      Navigator.pop(context);
-    }
-  }
-
-  Future<bool> _requestExit() async {
-    bool? exitResult = await showDialog<bool>(
+  Future<bool> _confirmExit() async {
+    final hasil = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (_) {
         return AlertDialog(
-          title: const Text('Batalkan Sesi Ujian?',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text("Keluar Ujian?"),
           content: const Text(
-              'Keluar membuat token Anda hangus otomatis demi menjaga kerahasiaan materi soal.'),
+            "Yakin ingin keluar?",
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('BATALKAN'),
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text("BATAL"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red, foregroundColor: Colors.white),
               onPressed: () {
                 Navigator.pop(context, true);
               },
-              child: const Text('YA, KELUAR'),
+              child: const Text("KELUAR"),
             ),
           ],
         );
       },
     );
-    return exitResult ?? false;
+
+    return hasil ?? false;
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    timer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -1049,110 +624,95 @@ class _RuangUjianPageState extends State<RuangUjianPage>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) return;
-        final bool kuduKeluar = await _requestExit();
-        if (kuduKeluar) {
-          await _eksekusiKeluarResmi();
+      onPopInvokedWithResult: (_, __) async {
+        bool keluar = await _confirmExit();
+
+        if (keluar && mounted) {
+          Navigator.pop(context);
         }
       },
       child: Scaffold(
-        resizeToAvoidBottomInset: false, // 🌟 LOCK KEYBOARD FIX
-        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
         body: Column(
           children: [
             Container(
               color: const Color(0xFF1E293B),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Text(_timeString,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          jam,
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14)),
-                      const SizedBox(width: 14),
-                      Icon(
-                        _connectionStatus == 'Offline'
-                            ? Icons.signal_cellular_connected_no_internet_4_bar
-                            : Icons.wifi_protected_setup_rounded,
-                        color: _connectionStatus == 'Offline'
-                            ? Colors.red
-                            : Colors.greenAccent,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(_connectionStatus,
-                          style: TextStyle(
-                              color: _connectionStatus == 'Offline'
-                                  ? Colors.red
-                                  : Colors.greenAccent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.sync_rounded,
-                            color: Colors.cyanAccent, size: 20),
-                        constraints: const BoxConstraints(),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        onPressed: _refreshHalamanWeb,
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.battery_charging_full_rounded,
-                          color: Colors.white, size: 16),
-                      const SizedBox(width: 4),
-                      Text('$_batteryLevel%',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 16),
-                      GestureDetector(
-                        onTap: () async {
-                          final bool kuduKeluar = await _requestExit();
-                          if (kuduKeluar) {
-                            await _eksekusiKeluarResmi();
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 5),
-                          decoration: BoxDecoration(
-                              color: Colors.red[600],
-                              borderRadius: BorderRadius.circular(8)),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.disabled_by_default_rounded,
-                                  color: Colors.white, size: 14),
-                              SizedBox(width: 4),
-                              Text('KELUAR',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold)),
-                            ],
+                            color: Colors.white,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 10),
+                        Text(
+                          koneksi,
+                          style: const TextStyle(
+                            color: Colors.greenAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          '$batteryLevel%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () async {
+                            bool keluar = await _confirmExit();
+
+                            if (keluar && mounted) {
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              "KELUAR",
+                              style: TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        )
+                      ],
+                    )
+                  ],
+                ),
               ),
             ),
             Expanded(
               child: Stack(
                 children: [
-                  WebViewWidget(controller: _webController),
-                  if (_isLoading)
+                  WebViewWidget(
+                    controller: _webController,
+                  ),
+                  if (_loading)
                     const Center(
-                        child: CircularProgressIndicator(
-                            color: Color(0xFF6C5CE7))),
+                      child: CircularProgressIndicator(),
+                    ),
                 ],
               ),
             ),
@@ -1163,21 +723,6 @@ class _RuangUjianPageState extends State<RuangUjianPage>
   }
 }
 
-// =========================================================================
-// 🌟 CLASS SYSTEM LAUNCHER (Aman Berdiri Tegak Tanpa Geser)
-// =========================================================================
-class SystemLauncher {
-  static const MethodChannel _channel = MethodChannel('aira.exam/launch');
-  static Future<void> setWindowSecure(bool secure) async {
-    try {
-      await _channel.invokeMethod('setWindowSecure', {'secure': secure});
-    } catch (_) {}
-  }
-}
-
-// =========================================================================
-// TAMPILAN BARU: TAB HISTORI KOTAK MASUK NOTIFIKASI (INBOX) SISWA
-// =========================================================================
 class KotakNotifikasiPage extends StatefulWidget {
   const KotakNotifikasiPage({super.key});
 
@@ -1186,143 +731,42 @@ class KotakNotifikasiPage extends StatefulWidget {
 }
 
 class _KotakNotifikasiPageState extends State<KotakNotifikasiPage> {
-  List<Map<String, String>> _listNotif = [];
+  List<Map<String, String>> data = [];
 
   @override
   void initState() {
     super.initState();
-    _muatDaftarNotifikasi();
+    load();
   }
 
-  Future<void> _muatDaftarNotifikasi() async {
-    final data = await ServiceNotifikasiLokal.ambilHistori();
-    setState(() {
-      _listNotif = data;
-    });
-  }
+  Future<void> load() async {
+    data = await ServiceNotifikasiLokal.ambilHistori();
 
-  Future<void> _tampilkanKonfirmasiHapusSemua() async {
-    bool? setujuHapus = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.delete_forever_rounded, color: Colors.redAccent),
-              SizedBox(width: 10),
-              Text("Kosongkan Kotak Masuk?",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ],
-          ),
-          content: const Text(
-              "Seluruh riwayat pengumuman dan token ujian lama akan dihapus permanen dari memori HP Anda."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("BATAL",
-                  style: TextStyle(
-                      color: Colors.blueGrey, fontWeight: FontWeight.bold)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("YA, HAPUS",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (setujuHapus == true) {
-      await ServiceNotifikasiLokal.hapusSemua();
-      setState(() {
-        _listNotif.clear();
-      });
+    if (mounted) {
+      setState(() {});
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FC),
       appBar: AppBar(
-        title: const Text('Kotak Masuk Pengumuman',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        actions: [
-          if (_listNotif.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep_rounded,
-                  color: Colors.redAccent, size: 26),
-              onPressed: _tampilkanKonfirmasiHapusSemua,
-            ),
-          const SizedBox(width: 8),
-        ],
+        title: const Text("Kotak Masuk"),
       ),
-      body: _listNotif.isEmpty
+      body: data.isEmpty
           ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.mail_outline_rounded,
-                      size: 60, color: Colors.black26),
-                  SizedBox(height: 12),
-                  Text('Belum ada pengumuman masuk dari Admin.',
-                      style: TextStyle(color: Colors.blueGrey, fontSize: 13)),
-                ],
-              ),
+              child: Text("Belum ada notifikasi"),
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _listNotif.length,
-              itemBuilder: (context, index) {
-                final item = _listNotif[index];
+              itemCount: data.length,
+              itemBuilder: (_, i) {
+                final item = data[i];
+
                 return Card(
-                  color: Colors.white,
-                  elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: Colors.black12, width: 0.5),
-                  ),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF6C5CE7),
-                      child: Icon(Icons.campaign_rounded, color: Colors.white),
-                    ),
-                    title: Text(item['title'] ?? '',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B))),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 6),
-                        Text(item['body'] ?? '',
-                            style: const TextStyle(
-                                color: Colors.blueGrey,
-                                fontSize: 13,
-                                height: 1.4)),
-                        const SizedBox(height: 8),
-                        Text(item['time'] ?? '',
-                            style: const TextStyle(
-                                color: Colors.black26,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                      ],
-                    ),
+                    title: Text(item['title'] ?? ''),
+                    subtitle: Text(item['body'] ?? ''),
+                    trailing: Text(item['time'] ?? ''),
                   ),
                 );
               },
@@ -1331,40 +775,50 @@ class _KotakNotifikasiPageState extends State<KotakNotifikasiPage> {
   }
 }
 
-// =========================================================================
-// ENGINE SISTEM PENYIMPANAN NOTIFIKASI KE MEMORI LOKAL HP (SHARED PREF)
-// =========================================================================
 class ServiceNotifikasiLokal {
-  static const String _keyNotif = "histori_notif_aira";
+  static const String _key = "histori_notif_aira";
 
-  static Future<void> simpanKeHistori(String title, String body) async {
+  static Future<void> simpanKeHistori(
+    String title,
+    String body,
+  ) async {
     final pref = await SharedPreferences.getInstance();
-    List<String> listMentah = pref.getStringList(_keyNotif) ?? [];
 
-    final waktuSekarang = DateFormat('dd MMM, HH:mm').format(DateTime.now());
+    List<String> list = pref.getStringList(_key) ?? [];
 
-    Map<String, String> dataBaru = {
+    final data = {
       "title": title,
       "body": body,
-      "time": waktuSekarang
+      "time": DateFormat(
+        'dd MMM HH:mm',
+      ).format(DateTime.now()),
     };
 
-    listMentah.insert(0, jsonEncode(dataBaru));
-    await pref.setStringList(_keyNotif, listMentah);
+    list.insert(0, jsonEncode(data));
+
+    await pref.setStringList(_key, list);
   }
 
   static Future<List<Map<String, String>>> ambilHistori() async {
     final pref = await SharedPreferences.getInstance();
-    List<String> listMentah = pref.getStringList(_keyNotif) ?? [];
 
-    return listMentah.map((item) {
-      final Map<String, dynamic> peta = jsonDecode(item);
-      return peta.map((kunci, nilai) => MapEntry(kunci, nilai.toString()));
+    List<String> list = pref.getStringList(_key) ?? [];
+
+    return list.map((e) {
+      final Map<String, dynamic> json = jsonDecode(e);
+
+      return json.map(
+        (k, v) => MapEntry(
+          k,
+          v.toString(),
+        ),
+      );
     }).toList();
   }
 
   static Future<void> hapusSemua() async {
     final pref = await SharedPreferences.getInstance();
-    await pref.remove(_keyNotif);
+
+    await pref.remove(_key);
   }
 }
